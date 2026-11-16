@@ -1,0 +1,72 @@
+# Configuração do buscador. Caminhos relativos são resolvidos a partir deste arquivo.
+
+[datajud]
+url = "https://api-publica.datajud.cnj.jus.br/api_publica_tjce/_search"
+# A chave pública do DataJud NÃO fica aqui: defina DATAJUD_API_KEY no arquivo .env
+# (veja .env.example). Chave vigente: https://datajud-wiki.cnj.jus.br/api-publica/acesso
+tamanho_pagina = 500
+
+[limites]
+# Uma requisição por vez por host, com pelo menos este intervalo (segundos) entre elas.
+intervalo_datajud = 3.0
+intervalo_portais = 10.0
+jitter = 2.0
+# Freio adaptativo: a cada 429/5xx o intervalo do host é multiplicado por fator_lentidao
+# (até intervalo_max) e só volta ao mínimo aos poucos (x recuperacao a cada sucesso).
+fator_lentidao = 2.0
+recuperacao = 0.95
+intervalo_max = 120.0
+# Backoff exponencial em 429/5xx/erros de rede: base * 2^tentativa, limitado a backoff_max.
+backoff_base = 2.0
+backoff_max = 300.0
+max_tentativas = 8
+timeout = 60.0
+# O e-SAJ do TJCE recusa o handshake com as cifras padrão do OpenSSL 3; para esses hosts
+# o nível de segurança das cifras é reduzido (o certificado continua sendo verificado).
+tls_legado = ["esaj.tjce.jus.br"]
+
+[busca]
+# Classes TPU: 65 = Ação Civil Pública; 156 = Cumprimento de sentença;
+# 12078 = Cumprimento de Sentença contra a Fazenda Pública.
+# Confirme com `cnj descobrir`.
+classes = [65, 156, 12078]
+# Assuntos por nome (match_phrase em assuntos.nome); não depende de saber os códigos.
+assuntos_nomes = [
+    "Área de Preservação Permanente",
+    "Ocupação irregular",
+    "Parcelamento do Solo",
+    "Loteamento",
+    "Ordem Urbanística",
+]
+# Códigos de assunto (opcional, somados aos nomes). Preencha após `cnj descobrir`.
+assuntos_codigos = []
+
+[cumprimento]
+# Regras que marcam um processo como "em cumprimento de sentença".
+classes = [156, 12078]
+movimentos_codigos = [848]  # 848 = Trânsito em julgado
+# Trechos (sem acento, minúsculos) procurados no nome/texto das movimentações.
+movimentos_trechos = [
+    "transito em julgado",
+    "transitado em julgado",
+    "cumprimento de sentenca",
+    "evolucao da classe",
+]
+
+[filtro]
+# Aplicado no `exportar` (e no `enriquecer`, exceto a regra de autor). `--sem-filtro` desliga.
+# Foro de origem = últimos 4 dígitos do número CNJ; no TJCE 0001 = Comarca de Fortaleza
+# (inclui VEMA, Varas da Fazenda e o Núcleo 4.0 de cumprimento de sentença).
+foros = ["0001"]
+# O polo ativo precisa ter uma parte cujo nome contenha um destes trechos (sem acento).
+# Partes vêm do e-SAJ; processos sem partes (nativos do PJe) só entram com --sem-partes.
+autores_trechos = ["ministerio publico", "defensoria publica"]
+polo_ativo_tipos = ["autor", "autora", "requerente", "reqte", "exequente", "exeqte",
+                    "impetrante", "promovente"]
+# Ano do trânsito em julgado (ou, sem ele, da primeira evidência de cumprimento).
+# transito_ate = 0 significa sem limite superior.
+transito_desde = 2015
+transito_ate = 0
+
+[saida]
+banco = "data/cnj.sqlite"
